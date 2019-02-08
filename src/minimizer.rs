@@ -45,7 +45,7 @@ pub fn minimizer(input_path: &str, output_path: &str, k: u8, m: u8, abundance_mi
 
     bucketizer.clean_all_buckets();
     
-    write::write(counter, output_path, m, abundance_min);
+    write::write(counter, output_path, m, write::Mode::COUNTS);
 }
 
 fn found_minimizer<'a>(subseq: &[u8], counter: &'a mut counter::Bucketizer<counter::VecCounter>, m: u8) -> () {

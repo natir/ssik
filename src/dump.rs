@@ -22,6 +22,7 @@ SOFTWARE.
 
 /* std use */
 use std::io::Read;
+use std::io::Seek;
 
 /* crate use */
 use csv;
@@ -32,17 +33,37 @@ use crate::convert;
 
 pub fn dump(input_path: &str, output_path: &str, abundance: u8) -> () {
     let mut reader = std::io::BufReader::new(std::fs::File::open(input_path).unwrap());
-
-    let k_buffer: &mut [u8] = &mut [0];
-    reader
-        .read_exact(k_buffer)
-        .expect("Error durring read count on disk");
-    let k = k_buffer[0];
-
     let out = std::io::BufWriter::new(std::fs::File::create(output_path).unwrap());
-
     let mut writer = csv::WriterBuilder::new().from_writer(out);
 
+    let numpy_buff: &mut [u8] = &mut [0; 9];
+    reader.read_exact(numpy_buff);
+    if &numpy_buff == &[b'\\', b'x', b'9', b'3', b'N', b'U', b'M', b'P', b'Y'] {
+        reader.seek(std::io::SeekFrom::Start(0));
+        return dump_numpy(writer, reader, abundance);
+    }
+        
+    let header_buff: &mut [u8] = &mut [0; 2]; 
+    reader
+        .read_exact(header_buff)
+        .expect("Error durring read count on disk");
+    let k = header_buff[0];
+    let mode = header_buff[0];
+
+    match mode {
+        0 => dump_all_counts(writer, reader, k, abundance),
+        1 => dump_counts(writer, reader, k, abundance),
+        2 => dump_kmer_counts(writer, reader, k, abundance),
+        _ => dump_counts(writer, reader, k, abundance),
+    }
+
+
+}
+
+pub fn dump_all_counts(mut writer: csv::Writer<std::io::BufWriter<std::fs::File>>, reader: std::io::BufReader<std::fs::File>, k: u8, abundance: u8) -> () {
+}
+
+pub fn dump_counts(mut writer: csv::Writer<std::io::BufWriter<std::fs::File>>, reader: std::io::BufReader<std::fs::File>, k: u8, abundance: u8) -> () {
     let mut i: u64 = 0;
     for mut chunks in reader.bytes().chunks(2).into_iter() {
         let dist = chunks.next().unwrap().unwrap();
@@ -55,6 +76,13 @@ pub fn dump(input_path: &str, output_path: &str, abundance: u8) -> () {
                 .unwrap();
         }
     }
+}
+
+
+pub fn dump_kmer_counts(mut writer: csv::Writer<std::io::BufWriter<std::fs::File>>, reader: std::io::BufReader<std::fs::File>, k: u8, abundance: u8) -> () {
+}
+
+pub fn dump_numpy(mut writer: csv::Writer<std::io::BufWriter<std::fs::File>>, reader: std::io::BufReader<std::fs::File>, abundance: u8) -> () {
 }
 
 fn reverse_hash(mut kmer: u64, k: u8) -> String {
